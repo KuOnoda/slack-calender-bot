@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, BackgroundTasks
 import requests
 from ics import Calendar
 from datetime import datetime, timedelta
@@ -6,16 +6,9 @@ import pytz
 
 app = FastAPI()
 
-# 公開カレンダーの.ics URL
 ics_url = "https://calendar.google.com/calendar/ical/86527e6d569ded6d0b4f284f5b5189a6ee7265363abd1e4ee754de1179bc6a89%40group.calendar.google.com/public/basic.ics"
 
-@app.post("/slack/events")
-async def slack_events(
-    token: str = Form(...),
-    command: str = Form(...),
-    text: str = Form(...),
-    response_url: str = Form(...)
-):
+def send_calendar_response(response_url: str):
     tz = pytz.timezone("Asia/Tokyo")
     now = datetime.now(tz)
     one_month_later = now + timedelta(days=30)
@@ -39,4 +32,14 @@ async def slack_events(
         "text": message
     })
 
-    return {"status": "ok"}
+@app.post("/slack/events")
+async def slack_events(
+    background_tasks: BackgroundTasks,
+    token: str = Form(...),
+    command: str = Form(...),
+    text: str = Form(...),
+    response_url: str = Form(...)
+):
+    # すぐにSlackへ「リクエスト受けたよ！」を返す
+    background_tasks.add_task(send_calendar_response, response_url)
+    return {"response_type": "ephemeral", "text": "開放予定を取得中です..."}
