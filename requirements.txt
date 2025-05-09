@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+requests
+ics
+pytz
